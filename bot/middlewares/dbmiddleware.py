@@ -11,8 +11,8 @@ class DbMiddleware(BaseMiddleware):
         self,
         handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
         event: Message,
-        data: Dict[str, Any]
+        data: Dict[str, Any],
     ) -> Any:
         self.counter += 1
-        data['counter'] = self.counter
+        data["counter"] = self.counter
         return await handler(event, data)
