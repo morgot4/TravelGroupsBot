@@ -6,6 +6,7 @@ from aiogram.utils import markdown
 from bot.config import settings
 from bot import router as bot_v1_router
 from bot.database import db_helper
+from bot.middlewares import DataBaseSession
 
 
 async def start_bot(bot: Bot):
@@ -26,9 +27,11 @@ async def main():
         default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN_V2),
     )
     dp = Dispatcher()
+    dp.include_router(bot_v1_router)
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
-    dp.include_router(bot_v1_router)
+
+    dp.update.middleware(DataBaseSession(db_helper.session_factory))
     await bot.delete_webhook(drop_pending_updates=True)
 
     try:
