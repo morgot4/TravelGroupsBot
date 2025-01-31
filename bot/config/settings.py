@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     DB_PORT: int
     DB_NAME: str
     ADMINS_ID: list[int]
+    API_ID: int
+    API_HASH: str
 
     @property
     def DATABASE_URL_asyncpg(self):

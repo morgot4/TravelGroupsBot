@@ -1,5 +1,3 @@
-__all__ = (
-    "DataBaseSession",
-)
+__all__ = ("DataBaseSession",)
 
 from .dbmiddleware import DataBaseSession

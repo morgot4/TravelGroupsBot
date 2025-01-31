@@ -7,4 +7,3 @@ class AdminsOrm(Base):
 
     username: Mapped[str]
     telegram_id: Mapped[int]
-    phone_number: Mapped[str]
