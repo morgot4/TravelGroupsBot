@@ -9,5 +9,7 @@ class MarksOrm(Base):
         primary_key=True, nullable=False, autoincrement=False
     )
     captain_username: Mapped[str] = mapped_column(nullable=True)
-    captain_telegram_id: Mapped[int] = mapped_column(nullable=True)
+    captain_telegram_id: Mapped[str] = mapped_column(nullable=True)
     captain_phone_number: Mapped[str] = mapped_column(nullable=True)
+    last_point: Mapped[int] = mapped_column(nullable=True)
+    # goodwan_id: Mapped[int] = mapped_column(nullable=True)

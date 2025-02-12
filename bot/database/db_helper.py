@@ -25,7 +25,7 @@ class DatabaseHelper:
     async def scoped_session_dependency(self) -> AsyncSession:
         session = self.get_scoped_session()
         yield session
-        await session.close()
+        await session.close()   
 
     async def create_db(self):
         async with self.engine.begin() as conn:

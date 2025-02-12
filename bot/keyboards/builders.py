@@ -13,7 +13,7 @@ def profile(text: str | list):
 
     [builder.button(text=txt) for txt in text]
     builder.adjust(*[1] * len(text))
-    return builder.as_markup(resize_keyboard=True, one_time_keyboard=True)
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
 
 
 def get_callback_buttons(*, buttons: dict[str, str], size: tuple[int] = (2,)):

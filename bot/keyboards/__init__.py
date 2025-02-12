@@ -6,6 +6,7 @@ __all__ = (
     "profile",
     "allow_contact",
     "rmk",
+    "admin_point_keyboard",
 )
 
 from .reply import (
@@ -14,6 +15,7 @@ from .reply import (
     admin_admins_keyboard,
     allow_contact,
     rmk,
+    admin_point_keyboard,
 )
 from .inline import get_confirmation_menu
 from .builders import profile

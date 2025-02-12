@@ -7,7 +7,6 @@ from bot.keyboards.builders import get_callback_buttons
 from bot.config import bot_manager
 
 
-
 async def get_all_admins(message: Message, session: AsyncSession):
     admins = await orm_select_admins(session=session)
     for admin in admins:

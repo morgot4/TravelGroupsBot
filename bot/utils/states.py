@@ -8,9 +8,17 @@ class MarkActions(StatesGroup):
     find_mark_by_code = State()
     find_mark_by_phone_number = State()
     fix_mark_code = State()
+    fix_mark_point = State()
     fix_mark_owner_username = State()
     fix_mark_owner_phone = State()
 
 
 class AdminActions(StatesGroup):
     add_admin = State()
+
+
+class PointAction(StatesGroup):
+    add_point = State()
+    find_point_by_number = State()
+    fix_point_number = State()
+    fix_point_text = State()

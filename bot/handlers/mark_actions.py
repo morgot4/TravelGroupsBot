@@ -5,15 +5,11 @@ from aiogram.utils import markdown
 from aiogram.enums import ParseMode
 from bot.utils.states import MarkActions
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.keyboards import admin_mark_keyboard, profile
+from bot.keyboards import admin_mark_keyboard, profile, rmk
 from bot.keyboards.builders import get_callback_buttons
-from bot.database.cruds import (
-    orm_add_mark,
-    orm_select_mark,
-    orm_update_mark,
-    orm_select_mark_by_phone_number,
-)
-from bot.utils.get_user import get_user
+from bot.database.cached_cruds import get_cached_mark
+from bot.database.cruds import orm_add_mark, orm_update_mark, orm_select_points
+from bot.utils.telegram_client import get_user
 from bot.config import bot_manager
 import phonenumbers
 from phonenumbers import carrier
@@ -23,7 +19,13 @@ router = Router()
 
 
 async def validate_mobile(number):
-    return carrier._is_mobile(number_type(phonenumbers.parse(number)))
+    if number[0] == "+":
+        number = "+7" + number[2:]
+    else:
+        number = "+7" + number[1:]
+    if carrier._is_mobile(number_type(phonenumbers.parse(number))):
+        return True, number
+    return False
 
 
 async def validate_user_id(bot: Bot, telegram_id: int, mark_code: str):
@@ -54,6 +56,7 @@ async def mark_code(message: Message, state: FSMContext, session: AsyncSession):
     data["captain_username"] = None
     data["captain_telegram_id"] = None
     data["captain_phone_number"] = None
+    data["last_point"] = None
     await orm_add_mark(session=session, data=data)
     await message.answer(
         text=markdown.markdown_decoration.quote(
@@ -87,27 +90,79 @@ async def fix_mark_code(message: Message, state: FSMContext):
 async def fix_mark_code(message: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
     previous_mark_code = data["mark_code"]
-    mark = await orm_select_mark(session=session, mark_code=previous_mark_code)
-    data["mark_code"] = message.text
-    data["captain_username"] = mark.captain_username
-    data["captain_telegram_id"] = mark.captain_telegram_id
-    data["captain_phone_number"] = mark.captain_phone_number
-    await orm_update_mark(session=session, mark=mark, data=data)
-    await message.answer(
-        text=markdown.markdown_decoration.quote(
-            f"Новый код {data['mark_code']} установлен"
-        ),
-        reply_markup=admin_mark_keyboard,
-    )
-    await state.clear()
+    mark = await get_cached_mark(session=session, key=previous_mark_code, delete=True)
+    if mark is not None:
+        data["mark_code"] = message.text
+        data["captain_username"] = mark.captain_username
+        data["captain_telegram_id"] = mark.captain_telegram_id
+        data["captain_phone_number"] = mark.captain_phone_number
+        data["last_point"] = mark.last_point
+        await orm_update_mark(session=session, mark=mark, data=data)
+        await message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"Новый код {data['mark_code']} установлен"
+            ),
+            reply_markup=admin_mark_keyboard,
+        )
+        await state.clear()
+    else:
+        await message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"Такой метки не существует, обновите список."
+            ),
+            reply_markup=admin_mark_keyboard,
+        )
 
+
+@router.message(MarkActions.fix_mark_point, F.text)
+async def fix_mark_point(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    mark = await get_cached_mark(session=session, key=data["mark_code"], delete=True)
+    if mark is not None:
+        if message.text.isdigit():
+            points = await orm_select_points(session=session)
+            numbers = [point.number for point in points]
+            if int(message.text) in numbers:
+                data["captain_username"] = mark.captain_username
+                data["captain_telegram_id"] = mark.captain_telegram_id
+                data["captain_phone_number"] = mark.captain_phone_number
+                data["last_point"] = int(message.text)
+                await orm_update_mark(session=session, mark=mark, data=data)
+                await message.answer(
+                    text=markdown.markdown_decoration.quote(
+                        f"Новый номер маяка установлен"
+                    ),
+                    reply_markup=admin_mark_keyboard,
+                )
+            else:
+                await message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"Такого маяка не существует"
+            ),
+            reply_markup=admin_mark_keyboard,
+        )
+        else:
+            await message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"Номер маяка должен быть числом"
+            ),
+            reply_markup=admin_mark_keyboard,
+        )
+    else:
+        await message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"Такой метки не существует, обновите список."
+            ),
+            reply_markup=admin_mark_keyboard,
+        )
+    await state.clear()
 
 @router.message(MarkActions.fix_mark_owner_username, F.text)
 async def fix_mark_owner_username(
     message: Message, state: FSMContext, session: AsyncSession
 ):
     new_username = message.text.replace("@", "")
-    new_user = await get_user(new_username)
+    new_user = await get_user(new_username, client=bot_manager.get_client())
     data = await state.get_data()
     mark_code = data["mark_code"]
     if new_user is None:
@@ -122,11 +177,12 @@ async def fix_mark_owner_username(
         if await validate_user_id(
             bot_manager.get_bot(), new_telegram_id, mark_code=mark_code
         ):
-            mark = await orm_select_mark(session=session, mark_code=mark_code)
+            mark = await get_cached_mark(session=session, key=mark_code, delete=True)
             data["mark_code"] = mark_code
             data["captain_username"] = new_username
-            data["captain_telegram_id"] = new_telegram_id
+            data["captain_telegram_id"] = str(new_telegram_id)
             data["captain_phone_number"] = mark.captain_phone_number
+            data["last_point"] = mark.last_point
             await orm_update_mark(session=session, mark=mark, data=data)
             await message.answer(
                 text=markdown.markdown_decoration.quote(
@@ -151,16 +207,15 @@ async def fix_mark_owner_phone(
     new_phone = message.text
     data = await state.get_data()
     mark_code = data["mark_code"]
-    if new_phone[0] == "+":
-        new_phone = "+7" + new_phone[2:]
-    else:
-        new_phone = "+7" + new_phone[1:]
-    if await validate_mobile(new_phone):
-        mark = await orm_select_mark(session=session, mark_code=mark_code)
+
+    is_valid, new_phone = await validate_mobile(new_phone)
+    if is_valid:
+        mark = await get_cached_mark(session=session, key=mark_code, delete=True)
         data["mark_code"] = mark_code
         data["captain_username"] = mark.captain_username
         data["captain_telegram_id"] = mark.captain_telegram_id
         data["captain_phone_number"] = new_phone
+        data["last_point"] = mark.last_point
         await orm_update_mark(session=session, mark=mark, data=data)
         await message.answer(
             text=markdown.markdown_decoration.quote(
@@ -200,7 +255,7 @@ async def find_mark_by_code(message: Message, state: FSMContext):
 @router.message(MarkActions.find_mark_by_code)
 async def find_mark_by_code(message: Message, state: FSMContext, session: AsyncSession):
     mark_code = message.text.upper()
-    mark = await orm_select_mark(session=session, mark_code=mark_code)
+    mark = await get_cached_mark(session=session, key=mark_code, delete=False)
     if mark is not None:
         await message.answer(
             text="Метка успешка найдена", reply_markup=admin_mark_keyboard
@@ -234,13 +289,10 @@ async def find_mark_by_phone_number(
     message: Message, state: FSMContext, session: AsyncSession
 ):
     phone_number = message.text
-    if phone_number[0] == "+":
-        phone_number = "+7" + phone_number[2:]
-    else:
-        phone_number = "+7" + phone_number[1:]
-    if await validate_mobile(phone_number):
-        mark = await orm_select_mark_by_phone_number(
-            session=session, phone_number=phone_number
+    is_valid, phone_number = await validate_mobile(phone_number)
+    if is_valid:
+        mark = await get_cached_mark(
+            session=session, key=phone_number, find_by="phone", delete=False
         )
         if mark is not None:
             await message.answer(
@@ -270,21 +322,33 @@ async def find_mark_by_phone_number(
             reply_markup=profile(f"\U0001f519 Назад"),
         )
 
+@router.message(MarkActions.add_phone_to_mark, F.text == "\U0001f4f5 Отмена")
+async def cancel_add_phone(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+            text=markdown.markdown_decoration.quote(
+                "Чтобы присвоить метку необходимо предоставить номер телефона. Введите код метки еще раз"
+            ),
+            reply_markup=rmk,
+        )
 
 @router.message(MarkActions.add_phone_to_mark)
 async def add_phone_to_mark(message: Message, session: AsyncSession, state: FSMContext):
     phone_number = message.contact.phone_number
-    telegram_id = message.from_user.id
+    telegram_id = str(message.from_user.id)
     username = message.from_user.username
+    is_valid, phone_number = await validate_mobile(phone_number)
     data = await state.get_data()
-    mark = await orm_select_mark(session=session, mark_code=data["mark_code"])
+    mark = await get_cached_mark(session=session, key=data["mark_code"], delete=True)
     data["captain_username"] = username
     data["captain_telegram_id"] = telegram_id
     data["captain_phone_number"] = phone_number
+    data["last_point"] = mark.last_point
     await message.answer(
         markdown.markdown_decoration.quote(
-            f"Теперь вы владелец метки {data["mark_code"]}"
-        )
+            f"Теперь вы владелец метки {data["mark_code"]}",
+        ),
+        reply_markup=rmk,
     )
     await orm_update_mark(session=session, data=data, mark=mark)
     await state.clear()

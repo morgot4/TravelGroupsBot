@@ -6,4 +6,4 @@ class AdminsOrm(Base):
     __tablename__ = "admins"
 
     username: Mapped[str]
-    telegram_id: Mapped[int]
+    telegram_id: Mapped[str]

@@ -5,7 +5,11 @@ from bot.config import bot_manager
 from bot import router as bot_v1_router
 from bot.database import db_helper
 from bot.middlewares import DataBaseSession
-from bot.utils import get_user, set_commands
+from bot.utils.marks_actions import get_captain_message
+from bot.utils.commands import set_commands
+
+
+from bot.config import settings
 
 
 async def start_bot(bot: Bot):
@@ -21,13 +25,16 @@ async def stop_bot(bot: Bot):
     )
 
 
+client = bot_manager.get_client()
+
+
 async def main():
     dp = bot_manager.get_dispatcher()
     bot = bot_manager.get_bot()
     dp.include_router(bot_v1_router)
+    dp.update.middleware(DataBaseSession(db_helper.session_factory))
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
-    dp.update.middleware(DataBaseSession(db_helper.session_factory))
     await bot.delete_webhook(drop_pending_updates=True)
 
     try:
@@ -36,5 +43,5 @@ async def main():
         await bot.session.close()
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+with client:
+    client.loop.run_until_complete(main())

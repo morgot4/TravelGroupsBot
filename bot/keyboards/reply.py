@@ -3,6 +3,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemo
 admin_start_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="\U0001f4cd Метки")],
+        [KeyboardButton(text="\U0001f4cc Маяки")],
         [KeyboardButton(text="\U0001faaa Администраторы")],
     ],
     resize_keyboard=True,
@@ -24,10 +25,29 @@ admin_mark_keyboard = ReplyKeyboardMarkup(
             KeyboardButton(text="\U0001f4de Проверка всех меток"),
             KeyboardButton(text="\U0001f4c3 Список всех меток"),
         ],
+        # [KeyboardButton(text="Отправить капитанам")],
         [KeyboardButton(text="\U0001f519 Назад")],
     ],
     resize_keyboard=True,
-    one_time_keyboard=True,
+    one_time_keyboard=False,
+    input_field_placeholder="Выберите действие",
+)
+
+admin_point_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="\U0001f50d Найти маяк (номер)"),
+        ],
+        [
+            KeyboardButton(text="\U00002795 Добавить маяк"),
+        ],
+        [
+            KeyboardButton(text="\U0001f4c3 Список всех маяков"),
+        ],
+        [KeyboardButton(text="\U0001f519 Назад")],
+    ],
+    resize_keyboard=True,
+    one_time_keyboard=False,
     input_field_placeholder="Выберите действие",
 )
 
@@ -40,7 +60,7 @@ admin_admins_keyboard = ReplyKeyboardMarkup(
         [KeyboardButton(text="\U0001f519 Назад")],
     ],
     resize_keyboard=True,
-    one_time_keyboard=True,
+    one_time_keyboard=False,
     input_field_placeholder="Выберите действие",
 )
 

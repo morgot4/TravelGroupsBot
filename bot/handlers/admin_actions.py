@@ -1,14 +1,14 @@
-from aiogram import Router, F, Bot
+from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.utils import markdown
-from aiogram.enums import ParseMode
 from bot.utils.states import AdminActions
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.keyboards import admin_admins_keyboard, profile
-from bot.keyboards.builders import get_callback_buttons
-from bot.database.cruds import orm_add_admin, orm_select_admin
+from bot.keyboards import admin_admins_keyboard
+from bot.database.cruds import orm_add_admin
+from bot.database.cached_cruds import get_cached_admin
 from bot.utils import get_user
+from bot.config import bot_manager
 
 router = Router()
 
@@ -25,10 +25,13 @@ async def back_admin_menu(message: Message, state: FSMContext):
 @router.message(AdminActions.add_admin, F.text)
 async def add_admin(message: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
-    admin = await get_user(message.text)
+    admin = await get_user(message.text, client=bot_manager.get_client())
     if admin is not None:
         telegram_id = admin.full_user.id
-        if await orm_select_admin(session=session, telegram_id=telegram_id) is not None:
+        if (
+            await get_cached_admin(session=session, admin_telegram_id=str(telegram_id))
+            is not None
+        ):
             await message.answer(
                 text=markdown.markdown_decoration.quote(
                     f"Данный пользователь уже является аднимистратором"
@@ -37,7 +40,7 @@ async def add_admin(message: Message, state: FSMContext, session: AsyncSession):
             )
         else:
             data["username"] = message.text.replace("@", "")
-            data["telegram_id"] = telegram_id
+            data["telegram_id"] = str(telegram_id)
             await orm_add_admin(session=session, data=data)
             await message.answer(
                 text=markdown.markdown_decoration.quote(

@@ -5,24 +5,26 @@ from aiogram.utils import markdown
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.database.cruds import (
-    orm_select_admin,
-    orm_select_mark,
-    orm_select_mark_by_telegram_id,
-)
+from bot.database.cached_cruds import get_cached_admin, get_cached_mark
+
+# from bot.database.cruds import (
+#     orm_select_admin,
+#     orm_select_mark,
+#     orm_select_mark_by_telegram_id,
+# )
 from bot.keyboards import (
     admin_start_menu,
-    get_confirmation_menu,
     admin_mark_keyboard,
     admin_admins_keyboard,
+    admin_point_keyboard,
     profile,
     rmk,
 )
 from bot.keyboards.builders import get_callback_buttons
-from bot.utils.states import MarkActions, AdminActions
+from bot.utils.states import MarkActions, AdminActions, PointAction
 from bot.utils.marks_actions import get_all_marks, check_all_marks
 from bot.utils.admins_action import get_all_admins
-
+from bot.utils.points_action import get_all_points
 
 router = Router()
 
@@ -31,48 +33,75 @@ router = Router()
 async def start(message: Message, session: AsyncSession):
     if message.chat.type in ["group", "supergroup"]:
         return
-     
+
     user_id = message.from_user.id
 
-    user_mark = await orm_select_mark_by_telegram_id(
-        session=session, telegram_id=user_id
+    user_mark = await get_cached_mark(
+        session=session, key=str(user_id), find_by="telegram_id", delete=False
     )
-    admin = await orm_select_admin(session=session, telegram_id=user_id)
+    admin = await get_cached_admin(
+        session=session, admin_telegram_id=str(user_id), delete=False
+    )
     if admin is not None:
         await message.answer(
-                text=markdown.markdown_decoration.quote(
-                    f"Здравствуйте, {message.from_user.first_name}. Вы зашли от имени администратора. "
-                ),
-                reply_markup=admin_start_menu,
-            )
-    
-    elif user_mark is None:
+            text=markdown.markdown_decoration.quote(
+                f"Здравствуйте, {message.from_user.first_name}. Вы зашли от имени администратора. "
+            ),
+            reply_markup=admin_start_menu,
+        )
+
+    else:
         await message.answer(
-            "У вас нет меток\\. Пришлите *код*", parse_mode=ParseMode.MARKDOWN_V2
+            text=markdown.markdown_decoration.quote(
+                """Здравствуйте!
+Вы находитесь в приложении Tourists Manager - «Контроль туристских групп на маршруте».
+Нажмите кнопку «Меню» в правом нижнем углу появится - «Labels», нажмите.
+В открывшееся поле внесите номер полученной МЕТКИ. 
+Шрифт - ЛАТИНСКИЙ, буквы - ЗАГЛАВНЫЕ, без пробелов.
+В случае если метка свободна, Вам будет предложено присвоить МЕТКУ.
+Нажмите кнопку «ДА».
+Далее в левом нижнем углу нажмите на кнопку 
+«Представить номер телефона».
+Далее - «Поделиться контактом».
+Если ваши действия верны, Вы станете владельцем метки."""
+            )
+        )
+
+@router.message(Command("labels"))
+async def start(message: Message, session: AsyncSession):
+    if message.chat.type in ["group", "supergroup"]:
+        return
+
+    user_id = message.from_user.id
+
+    user_mark = await get_cached_mark(
+        session=session, key=str(user_id), find_by="telegram_id", delete=False
+    )
+    if user_mark is not None:
+        await message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"Ваша метка: {user_mark.mark_code} \n Последняя позиция: {'Точка #'+ str(user_mark.last_point) if user_mark.last_point is not None else "-"}"
+            )
         )
     else:
         await message.answer(
-            f"Ваша метка\\: *{user_mark.mark_code}*", parse_mode=ParseMode.MARKDOWN_V2
+            text=markdown.markdown_decoration.quote(
+                f"Введите код метки",
+            ),
         )
-
-
 @router.message()
 async def main(message: Message, session: AsyncSession, state: FSMContext):
-    text = message.text
     if message.chat.type in ["group", "supergroup"]:
-        print(text.split())
-        if "местоположение" in text.split():
-            print(message)
-            print(message.from_user)
         return
-    
     user_id = message.from_user.id
-    admin = await orm_select_admin(session=session, telegram_id=user_id)
-    mark_orm = await orm_select_mark(session=session, mark_code=text.upper())
-    user_mark = await orm_select_mark_by_telegram_id(
-        session=session, telegram_id=user_id
+    user_mark = await get_cached_mark(
+        session=session, key=str(user_id), find_by="telegram_id", delete=False
     )
-
+    text = message.text
+    admin = await get_cached_admin(
+        session=session, admin_telegram_id=str(user_id), delete=False
+    )
+    mark_orm = await get_cached_mark(session=session, key=text.upper(), delete=False)
     if admin is not None:
         if text == "\U0001f4cd Метки":
             await message.answer(
@@ -90,12 +119,27 @@ async def main(message: Message, session: AsyncSession, state: FSMContext):
                 reply_markup=admin_admins_keyboard,
             )
 
+        elif text == "\U0001f4cc Маяки":
+            await message.answer(
+                text=markdown.markdown_decoration.quote(
+                    "Выберите взаимодействие с маяками"
+                ),
+                reply_markup=admin_point_keyboard,
+            )
+
         elif text == "\U00002795 Добавить метку":
             await message.answer(
                 text=markdown.markdown_decoration.quote(f"Введите код метки"),
                 reply_markup=profile(f"\U0001f519 Назад"),
             )
             await state.set_state(MarkActions.mark_code)
+
+        elif text == "\U00002795 Добавить маяк":
+            await message.answer(
+                text=markdown.markdown_decoration.quote(f"Введите номер маяка"),
+                reply_markup=profile(f"\U0001f519 Назад"),
+            )
+            await state.set_state(PointAction.add_point)
 
         elif text == "\U00002795 Добавить администратора":
             await message.answer(
@@ -127,6 +171,13 @@ async def main(message: Message, session: AsyncSession, state: FSMContext):
             )
             await get_all_marks(message=message, session=session)
 
+        elif text == "\U0001f4c3 Список всех маяков":
+            await message.answer(
+                text=markdown.markdown_decoration.quote(f"Все маяки ->"),
+                reply_markup=admin_point_keyboard,
+            )
+            await get_all_points(message=message, session=session)
+
         elif text == "\U0001f4c3 Список администраторов":
             await message.answer(
                 text=markdown.markdown_decoration.quote(f"Все aдминистраторы ->"),
@@ -140,6 +191,12 @@ async def main(message: Message, session: AsyncSession, state: FSMContext):
             )
             await state.set_state(MarkActions.find_mark_by_code)
 
+        elif text == "\U0001f50d Найти маяк (номер)":
+            await message.answer(
+                text="Введите номер маяка", reply_markup=profile(f"\U0001f519 Назад")
+            )
+            await state.set_state(PointAction.find_point_by_number)
+
         elif text == "\U0001f50d Найти метку (номер телефона)":
             await message.answer(
                 text="Введите номер телефона", reply_markup=profile(f"\U0001f519 Назад")
@@ -148,11 +205,13 @@ async def main(message: Message, session: AsyncSession, state: FSMContext):
 
         elif text == "\U0001f4de Проверка всех меток":
             await message.answer(text="Тестовое сообщение было отправлено всем меткам")
-            bad_marks = await check_all_marks(message=message, session=session)
+            bad_marks = await check_all_marks(session=session)
             if bad_marks == []:
                 await message.answer(text="У каждой метки есть владелец")
             else:
-                await message.answer(text=f"Незанятые метки: {','.join([code for code in bad_marks])}")
+                await message.answer(
+                    text=f"Незанятые метки: {', '.join([code for code in bad_marks])}"
+                )
 
         else:
             await message.answer(
@@ -161,14 +220,6 @@ async def main(message: Message, session: AsyncSession, state: FSMContext):
                 ),
                 reply_markup=admin_start_menu,
             )
-    elif text == "\U0001f4f5 Отмена":
-        await state.clear()
-        await message.answer(
-            text=markdown.markdown_decoration.quote(
-                "Чтобы присвоить метку необходимо предоставить номер телефона. Введите код метки еще раз"
-            ),
-            reply_markup=rmk,
-        )
 
     elif (
         mark_orm is not None
@@ -200,7 +251,6 @@ async def main(message: Message, session: AsyncSession, state: FSMContext):
     elif (
         mark_orm is not None
         and mark_orm.captain_telegram_id is not None
-        and mark_orm is None
     ):
         await message.answer(
             text=markdown.markdown_decoration.quote(

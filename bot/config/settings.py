@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     ADMINS_ID: list[int]
     API_ID: int
     API_HASH: str
+    API_USERNAME: str
+    CHAT_URL: str
 
     @property
     def DATABASE_URL_asyncpg(self):

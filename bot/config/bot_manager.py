@@ -3,16 +3,18 @@ from aiogram.client.bot import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 from .settings import settings
-from bot.database.redis_helper import redis_helper
-from aioredis import Redis
+from telethon import TelegramClient
 
 
 class BotManager:
-    def __init__(self, token: str, redis: Redis):
+    def __init__(self, token: str):
         self.bot = Bot(
             token=token, default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN_V2)
         )
-        self.dp = Dispatcher(bot=self.bot, storage=RedisStorage(redis=redis))
+        self.client = TelegramClient(
+            settings.API_USERNAME, settings.API_ID, settings.API_HASH
+        )
+        self.dp = Dispatcher(bot=self.bot)
 
     def get_bot(self):
         return self.bot
@@ -20,5 +22,10 @@ class BotManager:
     def get_dispatcher(self):
         return self.dp
 
+    def get_client(self):
+        return self.client
 
-bot_manager = BotManager(token=settings.BOT_TOKEN, redis=redis_helper.redis)
+
+bot_manager = BotManager(
+    token=settings.BOT_TOKEN,
+)
