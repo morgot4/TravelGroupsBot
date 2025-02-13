@@ -6,8 +6,6 @@ from sqlalchemy.ext.asyncio import (
 )
 from asyncio import current_task
 from bot.config import settings
-from .models import Base
-
 
 class DatabaseHelper:
     def __init__(self, url, echo):
