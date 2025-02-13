@@ -8,11 +8,11 @@ class Settings(BaseSettings):
     DB_HOST: str
     DB_PORT: int
     DB_NAME: str
-    ADMINS_ID: list[int]
     API_ID: int
     API_HASH: str
     API_USERNAME: str
     CHAT_URL: str
+    GOODWAN_BOT_NAME: str
 
     @property
     def DATABASE_URL_asyncpg(self):

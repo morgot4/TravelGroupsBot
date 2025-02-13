@@ -7,8 +7,6 @@ from bot.database import db_helper
 from bot.middlewares import DataBaseSession
 from bot.utils.marks_actions import get_captain_message
 from bot.utils.commands import set_commands
-
-
 from bot.config import settings
 
 

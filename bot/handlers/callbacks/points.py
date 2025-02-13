@@ -10,7 +10,7 @@ from bot.database.cached_cruds import (
 )
 from bot.database.cruds import orm_delete_point
 from bot.keyboards.builders import get_callback_buttons
-from bot.keyboards import admin_mark_keyboard, allow_contact, rmk, profile
+from bot.keyboards import profile
 from bot.utils.states import PointAction
 
 

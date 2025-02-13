@@ -27,13 +27,5 @@ class DatabaseHelper:
         yield session
         await session.close()   
 
-    async def create_db(self):
-        async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    async def drop_db(self):
-        async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-
 
 db_helper = DatabaseHelper(url=settings.DATABASE_URL_asyncpg, echo=False)

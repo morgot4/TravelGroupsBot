@@ -21,7 +21,6 @@ router = Router()
 async def more_about_mark(callback: CallbackQuery, session: AsyncSession):
     mark_code = "_".join(callback.data.split("_")[3:])
     mark = await get_cached_mark(session=session, key=mark_code, delete=False)
-    print(mark.last_point)
     if mark.captain_username is not None:
         new_text = (
             markdown.markdown_decoration.quote(f"\nТелеграмм: @{mark.captain_username}")

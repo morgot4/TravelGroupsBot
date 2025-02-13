@@ -1,7 +1,7 @@
 from telethon.sync import TelegramClient, events
 from telethon.tl.functions.users import GetFullUserRequest
 from telethon.types import UserFull
-from bot.config import bot_manager
+from bot.config import bot_manager, settings
 from bot.database import db_helper
 from bot.utils.marks_actions import get_captain_message
 
@@ -22,7 +22,7 @@ async def get_user(username: str, client: TelegramClient) -> UserFull:
 @client.on(events.NewMessage(pattern=r"Метка"))
 async def handler(event):
     sender = await event.get_sender()
-    if sender.bot and sender.first_name == "GoodWAN":
+    if sender.bot and sender.first_name == settings.GOODWAN_BOT_NAME:
         text = event.raw_text.split("#")
         if len(text) > 1:
             point_number = text[1]

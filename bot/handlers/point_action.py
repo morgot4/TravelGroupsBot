@@ -5,12 +5,10 @@ from aiogram.utils import markdown
 from aiogram.enums import ParseMode
 from bot.utils.states import PointAction
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.keyboards import admin_point_keyboard, profile, rmk
+from bot.keyboards import admin_point_keyboard
 from bot.keyboards.builders import get_callback_buttons
-from bot.database.cached_cruds import get_cached_point, add_cached_point
+from bot.database.cached_cruds import get_cached_point
 from bot.database.cruds import orm_add_point, orm_update_point
-from bot.utils.telegram_client import get_user
-from bot.config import bot_manager
 
 
 router = Router()

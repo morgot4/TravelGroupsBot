@@ -1,5 +1,5 @@
 from aiogram import Router
-from aiogram.types import Message, ContentType
+from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.utils import markdown
 from aiogram.enums import ParseMode
@@ -7,11 +7,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.database.cached_cruds import get_cached_admin, get_cached_mark
 
-# from bot.database.cruds import (
-#     orm_select_admin,
-#     orm_select_mark,
-#     orm_select_mark_by_telegram_id,
-# )
+
 from bot.keyboards import (
     admin_start_menu,
     admin_mark_keyboard,
@@ -36,9 +32,6 @@ async def start(message: Message, session: AsyncSession):
 
     user_id = message.from_user.id
 
-    user_mark = await get_cached_mark(
-        session=session, key=str(user_id), find_by="telegram_id", delete=False
-    )
     admin = await get_cached_admin(
         session=session, admin_telegram_id=str(user_id), delete=False
     )
