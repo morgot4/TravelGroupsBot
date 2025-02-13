@@ -3,11 +3,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     BOT_TOKEN: str
+
     DB_USER: str
     DB_PASS: str
     DB_HOST: str
     DB_PORT: int
     DB_NAME: str
+
+    REDIS_HOST: str
+    REDIS_PORT: int
+
     API_ID: int
     API_HASH: str
     API_USERNAME: str

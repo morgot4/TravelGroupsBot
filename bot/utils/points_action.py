@@ -3,11 +3,8 @@ from aiogram.enums import ParseMode
 from aiogram.utils import markdown
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.database.cruds import orm_select_points
-from bot.database.models import MarksOrm
 from bot.database.cached_cruds import add_cached_point
 from bot.keyboards.builders import get_callback_buttons
-from bot.keyboards import admin_mark_keyboard
-from bot.config import bot_manager
 
 
 async def get_all_points(message: Message, session: AsyncSession):

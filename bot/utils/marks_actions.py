@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.database.cruds import orm_select_marks, orm_update_mark, orm_update_mark
 from bot.database.models import MarksOrm
 from bot.keyboards.builders import get_callback_buttons
-from bot.keyboards import admin_mark_keyboard
 from bot.config import bot_manager
 from bot.database.cached_cruds import get_cached_mark, get_cached_point, add_cached_mark
 
@@ -45,7 +44,7 @@ async def clear_mark(mark: MarksOrm, session: AsyncSession):
 async def clear_all_marks(session: AsyncSession):
     marks = await orm_select_marks(session=session)
     for mark in marks:
-        clear_mark(mark=mark, session=session)
+        await clear_mark(mark=mark, session=session)
 
 
 async def check_all_marks(session: AsyncSession):

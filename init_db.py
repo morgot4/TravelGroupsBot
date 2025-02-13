@@ -39,7 +39,8 @@ async def add_marks(session: AsyncSession, mark_codes):
 async def add_points(session: AsyncSession):
     for i in range(11):
         point = PointsOrm(
-            number=i
+            number=i,
+            text=""
         )
         session.add(point)
         await session.commit()

@@ -8,9 +8,9 @@ from bot.database.cruds import (
     orm_select_mark_by_telegram_id,
     orm_select_point,
 )
+from bot.config import settings
 
-rd = redis.Redis(decode_responses=True)
-
+rd = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True)
 
 async def get_cached_mark(
     session: AsyncSession, key: str, delete: False, find_by="code"

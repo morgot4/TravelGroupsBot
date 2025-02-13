@@ -22,23 +22,26 @@ router = Router()
 async def more_about_point(callback: CallbackQuery, session: AsyncSession):
     number = "_".join(callback.data.split("_")[3:])
     point = await get_cached_point(session=session, number=int(number), delete=False)
-    new_text = f"Точка *\\#{markdown.markdown_decoration.quote(str(point.number))}*\nТекст\\: {point.text}"
+    if point is not None:
+        new_text = f"Точка *\\#{markdown.markdown_decoration.quote(str(point.number))}*\nТекст\\: {point.text}"
 
-    await callback.message.edit_text(
-        text=new_text,
-        parse_mode=ParseMode.MARKDOWN_V2,
-        reply_markup=get_callback_buttons(
-            buttons={
-                "\U0001f6e0 Изменить": f"fix_point_{number}",
-                "\U0001f5d1 Удалить": f"delete_point_{number}",
-                "\U00002b06 Скрыть": f"less_about_point_{number}",
-            },
-            size=(
-                2,
-                1,
+        await callback.message.edit_text(
+            text=new_text,
+            parse_mode=ParseMode.MARKDOWN_V2,
+            reply_markup=get_callback_buttons(
+                buttons={
+                    "\U0001f6e0 Изменить": f"fix_point_{number}",
+                    "\U0001f5d1 Удалить": f"delete_point_{number}",
+                    "\U00002b06 Скрыть": f"less_about_point_{number}",
+                },
+                size=(
+                    2,
+                    1,
+                ),
             ),
-        ),
-    )
+        )
+    else:
+        await callback.message.answer("Такого маяка не существует")
     await callback.answer()
 
 

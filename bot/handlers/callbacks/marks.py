@@ -190,7 +190,7 @@ async def yes_clear_all_marks(callback: CallbackQuery, session: AsyncSession):
         "Метки успешно обновлены", reply_markup=admin_mark_keyboard
     )
     await callback.answer()
-    await clear_all_marks(ession=session)
+    await clear_all_marks(session=session)
 
 
 @router.callback_query(F.data.startswith("no_clear"))
