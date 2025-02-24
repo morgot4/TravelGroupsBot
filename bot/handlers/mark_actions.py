@@ -56,7 +56,7 @@ async def mark_code(message: Message, state: FSMContext, session: AsyncSession):
     data["captain_username"] = None
     data["captain_telegram_id"] = None
     data["captain_phone_number"] = None
-    data["last_point"] = None
+    data["history"] = []
     await orm_add_mark(session=session, data=data)
     await message.answer(
         text=markdown.markdown_decoration.quote(
@@ -96,7 +96,7 @@ async def fix_mark_code(message: Message, state: FSMContext, session: AsyncSessi
         data["captain_username"] = mark.captain_username
         data["captain_telegram_id"] = mark.captain_telegram_id
         data["captain_phone_number"] = mark.captain_phone_number
-        data["last_point"] = mark.last_point
+        data["history"] = mark.history
         await orm_update_mark(session=session, mark=mark, data=data)
         await message.answer(
             text=markdown.markdown_decoration.quote(
@@ -114,48 +114,6 @@ async def fix_mark_code(message: Message, state: FSMContext, session: AsyncSessi
         )
 
 
-@router.message(MarkActions.fix_mark_point, F.text)
-async def fix_mark_point(message: Message, state: FSMContext, session: AsyncSession):
-    data = await state.get_data()
-    mark = await get_cached_mark(session=session, key=data["mark_code"], delete=True)
-    if mark is not None:
-        if message.text.isdigit():
-            points = await orm_select_points(session=session)
-            numbers = [point.number for point in points]
-            if int(message.text) in numbers:
-                data["captain_username"] = mark.captain_username
-                data["captain_telegram_id"] = mark.captain_telegram_id
-                data["captain_phone_number"] = mark.captain_phone_number
-                data["last_point"] = int(message.text)
-                await orm_update_mark(session=session, mark=mark, data=data)
-                await message.answer(
-                    text=markdown.markdown_decoration.quote(
-                        f"Новый номер маяка установлен"
-                    ),
-                    reply_markup=admin_mark_keyboard,
-                )
-            else:
-                await message.answer(
-            text=markdown.markdown_decoration.quote(
-                f"Такого маяка не существует"
-            ),
-            reply_markup=admin_mark_keyboard,
-        )
-        else:
-            await message.answer(
-            text=markdown.markdown_decoration.quote(
-                f"Номер маяка должен быть числом"
-            ),
-            reply_markup=admin_mark_keyboard,
-        )
-    else:
-        await message.answer(
-            text=markdown.markdown_decoration.quote(
-                f"Такой метки не существует, обновите список."
-            ),
-            reply_markup=admin_mark_keyboard,
-        )
-    await state.clear()
 
 @router.message(MarkActions.fix_mark_owner_username, F.text)
 async def fix_mark_owner_username(
@@ -182,7 +140,7 @@ async def fix_mark_owner_username(
             data["captain_username"] = new_username
             data["captain_telegram_id"] = str(new_telegram_id)
             data["captain_phone_number"] = mark.captain_phone_number
-            data["last_point"] = mark.last_point
+            data["history"] = mark.history
             await orm_update_mark(session=session, mark=mark, data=data)
             await message.answer(
                 text=markdown.markdown_decoration.quote(
@@ -215,7 +173,7 @@ async def fix_mark_owner_phone(
         data["captain_username"] = mark.captain_username
         data["captain_telegram_id"] = mark.captain_telegram_id
         data["captain_phone_number"] = new_phone
-        data["last_point"] = mark.last_point
+        data["history"] = mark.history
         await orm_update_mark(session=session, mark=mark, data=data)
         await message.answer(
             text=markdown.markdown_decoration.quote(
@@ -317,7 +275,7 @@ async def find_mark_by_phone_number(
     else:
         await message.answer(
             text=markdown.markdown_decoration.quote(
-                f"Неверный омер телефона. Проверьте правильность написания и попробуйте снова"
+                f"Неверный номер телефона. Проверьте правильность написания и попробуйте снова"
             ),
             reply_markup=profile(f"\U0001f519 Назад"),
         )
@@ -343,7 +301,7 @@ async def add_phone_to_mark(message: Message, session: AsyncSession, state: FSMC
     data["captain_username"] = username
     data["captain_telegram_id"] = telegram_id
     data["captain_phone_number"] = phone_number
-    data["last_point"] = mark.last_point
+    data["history"] = mark.history
     await message.answer(
         markdown.markdown_decoration.quote(
             f"Теперь вы владелец метки {data["mark_code"]}",

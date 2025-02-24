@@ -31,7 +31,7 @@ async def orm_add_mark(session: AsyncSession, data: dict):
         captain_username=data["captain_username"],
         captain_telegram_id=data["captain_telegram_id"],
         captain_phone_number=data["captain_phone_number"],
-        last_point=data["last_point"]
+        history=data["history"]
     )
     session.add(mark)
     await session.commit()

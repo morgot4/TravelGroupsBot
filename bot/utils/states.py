@@ -8,7 +8,7 @@ class MarkActions(StatesGroup):
     find_mark_by_code = State()
     find_mark_by_phone_number = State()
     fix_mark_code = State()
-    fix_mark_point = State()
+    drop_mark_history = State()
     fix_mark_owner_username = State()
     fix_mark_owner_phone = State()
 

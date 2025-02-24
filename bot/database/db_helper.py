@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from asyncio import current_task
 from bot.config import settings
+from contextlib import asynccontextmanager
 
 class DatabaseHelper:
     def __init__(self, url, echo):
@@ -15,15 +16,17 @@ class DatabaseHelper:
         )
 
     def get_scoped_session(self) -> AsyncSession:
-        session = async_scoped_session(
+        return async_scoped_session(
             session_factory=self.session_factory, scopefunc=current_task
         )
-        return session
 
+    @asynccontextmanager
     async def scoped_session_dependency(self) -> AsyncSession:
         session = self.get_scoped_session()
-        yield session
-        await session.close()   
+        try:
+            yield session
+        finally:
+            await session.remove()  
 
 
 db_helper = DatabaseHelper(url=settings.DATABASE_URL_asyncpg, echo=False)

@@ -1,5 +1,6 @@
 from .base import Base
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ARRAY, Integer, text
 
 
 class MarksOrm(Base):
@@ -11,5 +12,4 @@ class MarksOrm(Base):
     captain_username: Mapped[str] = mapped_column(nullable=True)
     captain_telegram_id: Mapped[str] = mapped_column(nullable=True)
     captain_phone_number: Mapped[str] = mapped_column(nullable=True)
-    last_point: Mapped[int] = mapped_column(nullable=True)
-    # goodwan_id: Mapped[int] = mapped_column(nullable=True)
+    history: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=True, server_default=text("'{}'"))

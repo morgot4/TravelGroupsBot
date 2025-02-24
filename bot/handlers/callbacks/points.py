@@ -23,7 +23,7 @@ async def more_about_point(callback: CallbackQuery, session: AsyncSession):
     number = "_".join(callback.data.split("_")[3:])
     point = await get_cached_point(session=session, number=int(number), delete=False)
     if point is not None:
-        new_text = f"Точка *\\#{markdown.markdown_decoration.quote(str(point.number))}*\nТекст\\: {point.text}"
+        new_text = f"Точка *\\#{markdown.markdown_decoration.quote(str(point.number))}*\nТекст\\: {markdown.markdown_decoration.quote(point.text)}"
 
         await callback.message.edit_text(
             text=new_text,

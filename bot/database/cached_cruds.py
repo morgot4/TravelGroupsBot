@@ -39,10 +39,10 @@ async def get_cached_mark(
                 if mark_data["captain_phone_number"] == "None"
                 else mark_data["captain_phone_number"]
             ),
-            last_point=(
-                None
-                if mark_data["last_point"] == "None"
-                else mark_data["last_point"]
+            history=(
+                []
+                if mark_data["history"] == "None"
+                else mark_data["history"].split(",")
             ),
         )
     if find_by == "code":
@@ -108,8 +108,8 @@ async def add_cached_mark(mark: MarksOrm):
             "captain_username": (
                 "None" if mark.captain_username is None else mark.captain_username
             ),
-            "last_point": (
-                "None" if mark.last_point is None else mark.last_point
+            "history": (
+                "None" if mark.history == [] else ",".join(list(map(str, mark.history)))
             ),
         },
     )

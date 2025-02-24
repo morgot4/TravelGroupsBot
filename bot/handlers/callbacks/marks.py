@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.database.cached_cruds import (
     get_cached_mark,
 )
-from bot.database.cruds import orm_delete_mark
+from bot.database.cruds import orm_delete_mark, orm_update_mark
 from bot.keyboards.builders import get_callback_buttons, profile
 from bot.keyboards import admin_mark_keyboard, allow_contact, rmk
 from bot.utils.states import MarkActions
@@ -24,7 +24,7 @@ async def more_about_mark(callback: CallbackQuery, session: AsyncSession):
     if mark.captain_username is not None:
         new_text = (
             markdown.markdown_decoration.quote(f"\nТелеграмм: @{mark.captain_username}")
-            + f"\nТелефон: `{mark.captain_phone_number}`" + f"\nТочка: {"\\-" if mark.last_point is None else mark.last_point}"
+            + f"\nТелефон: `{mark.captain_phone_number}`" + f"\nМаршрут: {"\\-" if mark.history is None else " \\> ".join(list(map(str, mark.history)))}"
         )
     else:
         new_text = markdown.markdown_decoration.quote(f"\nТелеграмм: -\nТелефон: -\nТочка: -")
@@ -80,7 +80,7 @@ async def fix_mark(callback: CallbackQuery, session: AsyncSession):
             buttons={
                 "\U0001f511 Изменить код метки": f"fix_code_mark_{mark_code}",
                 "\U0001f6b9 Изменить владельца": f"fix_owner_mark_{mark_code}",
-                "\U0001f4cc Изменить последнюю точку": f"fix_point_mark_{mark_code}",
+                "\U000026a0 Сбросить историю маршрута": f"drop_mark_history_{mark_code}",
                 "\U000026a0 Очистить метку \U000026a0": f"clear_mark_{mark_code}",
                 "\U00002b06 Скрыть": f"less_about_mark_{mark_code}",
             },
@@ -106,15 +106,30 @@ async def fix_code_mark_(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("fix_point_mark_"))
-async def fix_point_mark_(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data.startswith("drop_mark_history_"))
+async def drop_point_mark_(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     mark_code = "_".join(callback.data.split("_")[3:])
-    await state.set_state(MarkActions.fix_mark_point)
-    await state.set_data({"mark_code": mark_code})
-    await callback.message.answer(
-        markdown.markdown_decoration.quote("Введите новый номер маяка"),
-        reply_markup=profile("\U0001f519 Назад"),
-    )
+    data = await state.get_data()
+    mark = await get_cached_mark(session=session, key=mark_code, delete=True)
+    if mark is not None:
+        data["captain_username"] = mark.captain_username
+        data["captain_telegram_id"] = mark.captain_telegram_id
+        data["captain_phone_number"] = mark.captain_phone_number
+        data["history"] = []
+        await orm_update_mark(session=session, mark=mark, data=data)
+        await callback.message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"История сброшена"
+            ),
+            reply_markup=admin_mark_keyboard,
+        )
+    else:
+        await callback.message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"Такой метки не существует, обновите список."
+            ),
+            reply_markup=admin_mark_keyboard,
+        )
     await callback.answer()
 
 
@@ -205,7 +220,7 @@ async def yes_clear_all_marks(
 ):
     await state.set_state(MarkActions.add_phone_to_mark)
     await callback.message.answer(
-        "Требуется номер телефона", reply_markup=allow_contact
+        "ЖМИ НА \U0000260e предоставить номер ", reply_markup=allow_contact
     )
     await callback.answer()
 

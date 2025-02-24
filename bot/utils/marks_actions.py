@@ -22,6 +22,24 @@ async def get_all_marks(message: Message, session: AsyncSession):
             parse_mode=ParseMode.MARKDOWN_V2,
         )
 
+async def get_history(message: Message, mark: MarksOrm, session: AsyncSession):
+    history = mark.history
+    await message.answer(markdown.markdown_decoration.quote(f"Маршрут: {"\\-" if mark.history is None else " > ".join(list(map(str, mark.history)))}"))
+    if history:
+        for number in history:
+            point = await get_cached_point(session=session, number=number, delete=False)
+            await message.answer(
+                text=f"Точка*{markdown.markdown_decoration.quote("#"+ str(number))}*\n\nЗадание:\n{markdown.markdown_decoration.quote(point.text)}",
+                
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+    else:
+        await message.answer(
+                text=markdown.markdown_decoration.quote("Вы не были ни на одной из точек."),
+                
+                parse_mode=ParseMode.MARKDOWN_V2,
+            )
+
 
 async def clear_mark(mark: MarksOrm, session: AsyncSession):
     id = mark.captain_telegram_id
@@ -37,6 +55,7 @@ async def clear_mark(mark: MarksOrm, session: AsyncSession):
             "captain_username": None,
             "captain_telegram_id": None,
             "captain_phone_number": None,
+            "history": []
         },
     )
 
@@ -66,14 +85,15 @@ async def check_all_marks(session: AsyncSession):
 async def get_captain_message(session: AsyncSession, mark_code: str, number: int):
     mark = await get_cached_mark(session=session, key=mark_code, delete=True, find_by="code")
     point = await get_cached_point(session=session, number=number, delete=True)
-    if mark.last_point == point.number:
+    
+    if point.number in mark.history:
         return None, None
+    new_history = mark.history.copy()
+    new_history.append(point.number)
     data = {
-        "last_point": point.number
+        "history": new_history
     }
     await orm_update_mark(session=session, mark=mark, data=data)
-    await session.close()
     message = point.text
     captain_id = mark.captain_telegram_id
-
     return captain_id, message

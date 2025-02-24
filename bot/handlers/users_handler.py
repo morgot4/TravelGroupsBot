@@ -18,7 +18,7 @@ from bot.keyboards import (
 )
 from bot.keyboards.builders import get_callback_buttons
 from bot.utils.states import MarkActions, AdminActions, PointAction
-from bot.utils.marks_actions import get_all_marks, check_all_marks
+from bot.utils.marks_actions import get_all_marks, check_all_marks, get_history 
 from bot.utils.admins_action import get_all_admins
 from bot.utils.points_action import get_all_points
 
@@ -45,23 +45,23 @@ async def start(message: Message, session: AsyncSession):
 
     else:
         await message.answer(
-            text=markdown.markdown_decoration.quote(
-                """Здравствуйте!
-Вы находитесь в приложении Tourists Manager - «Контроль туристских групп на маршруте».
-Нажмите кнопку «Меню» в правом нижнем углу появится - «Labels», нажмите.
-В открывшееся поле внесите номер полученной МЕТКИ. 
+            text=
+                """Здравствуйте! \U0001F44B
+Вы находитесь в боте Tourists Manager - «Контроль туристских групп на маршруте».
+Нажмите кнопку «Меню» в левом нижнем углу, в появившемся списке команд нажмите - */labels*
+В открывшееся поле набора сообщения *напишите и отправьте КОД МЕТКИ* \U0000270D. 
 Шрифт - ЛАТИНСКИЙ, буквы - ЗАГЛАВНЫЕ, без пробелов.
 В случае если метка свободна, Вам будет предложено присвоить МЕТКУ.
-Нажмите кнопку «ДА».
-Далее в левом нижнем углу нажмите на кнопку 
-«Представить номер телефона».
+Нажмите кнопку «\U00002705ДА» .
+Далее в левом нижнем углу *нажмите на кнопку* 
+«\U0000260e Представить номер телефона».
 Далее - «Поделиться контактом».
-Если ваши действия верны, Вы станете владельцем метки."""
-            )
+Если ваши действия верны, Вы станете владельцем метки.\U0001F44F """
+            
         )
 
 @router.message(Command("labels"))
-async def start(message: Message, session: AsyncSession):
+async def labels(message: Message, session: AsyncSession):
     if message.chat.type in ["group", "supergroup"]:
         return
 
@@ -73,15 +73,37 @@ async def start(message: Message, session: AsyncSession):
     if user_mark is not None:
         await message.answer(
             text=markdown.markdown_decoration.quote(
-                f"Ваша метка: {user_mark.mark_code} \n Последняя позиция: {'Точка #'+ str(user_mark.last_point) if user_mark.last_point is not None else "-"}"
+                f"Ваша метка: {user_mark.mark_code} \nПоследняя позиция: {'Точка #'+ str(user_mark.history[-1]) if user_mark.history != [] else "-"}"
             )
         )
     else:
         await message.answer(
             text=markdown.markdown_decoration.quote(
                 f"Введите код метки",
+
             ),
         )
+
+@router.message(Command("history"))
+async def history(message: Message, session: AsyncSession):
+    if message.chat.type in ["group", "supergroup"]:
+        return
+
+    user_id = message.from_user.id
+
+    user_mark = await get_cached_mark(
+        session=session, key=str(user_id), find_by="telegram_id", delete=False
+    )
+    if user_mark is not None:
+        await get_history(message=message, mark=user_mark, session=session)
+    else:
+        await message.answer(
+            text=markdown.markdown_decoration.quote(
+                f"У вас нет меток",
+
+            ),
+        )
+
 @router.message()
 async def main(message: Message, session: AsyncSession, state: FSMContext):
     if message.chat.type in ["group", "supergroup"]:
